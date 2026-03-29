@@ -38,6 +38,21 @@
 3. Validate Slack identity mapping exists for target user.
 4. Requeue only after root cause mitigation to avoid repeated failed sends.
 
+## Meeting Creation Retry Handling
+- Primary retry queue: `meeting-create-retry`
+- Worker retry policy:
+	- max retries: 3
+	- exponential delay from `QUEUE_BACKOFF_MS`
+- On exhausted retries:
+	- request status marked `FAILED`
+	- payload moved to `dead-letter` queue (`jobName=dead-letter-meeting-create`)
+
+## Meeting Failure Recovery
+1. Inspect `meeting_requests.failureReason` and dead-letter payload context.
+2. Verify organizer and participants still have Microsoft identity mappings.
+3. Validate Microsoft Graph app credentials and permission scopes.
+4. Replay request only after root-cause remediation.
+
 ## Operational Notes
 - Use correlation ID for tracing logs per request.
 - Do not log credentials, tokens, or secret values.

@@ -15,7 +15,8 @@
 - Slack attendance ingress is implemented with deterministic command parsing and signature verification.
 - Google Sheets preference ingest is implemented with deterministic row mapping.
 - Slack outbound reminder sending is implemented for missing daily preferences.
-- Microsoft Graph and Azure OpenAI integrations remain pending.
+- Microsoft Graph meeting creation is implemented with token caching/refresh and retry handling.
+- Azure OpenAI integration remains pending.
 
 ## Slack Documentation
 - Detailed Slack contract and flow are documented in `docs/integrations-slack.md`.

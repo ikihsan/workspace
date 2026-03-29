@@ -58,6 +58,16 @@ enum ReminderStatus {
   FAILED
 }
 
+enum MeetingRequestStatus {
+  PENDING
+  CREATED
+  FAILED
+}
+
+enum MeetingProvider {
+  MICROSOFT_TEAMS
+}
+
 model User {
   id                 String              @id @default(uuid())
   email              String              @unique
@@ -69,6 +79,7 @@ model User {
   attendanceEvents   AttendanceEvent[]
   preferenceDays     PreferenceDay[]
   reminders          Reminder[]
+  organizedMeetingRequests MeetingRequest[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -160,4 +171,39 @@ model Reminder {
   @@unique([userId, date, reminderType, channel])
   @@index([status, createdAt])
   @@map("reminders")
+}
+
+model MeetingRequest {
+  id                 String               @id @default(uuid())
+  organizerUserId    String
+  organizerUser      User                 @relation(fields: [organizerUserId], references: [id], onDelete: Cascade)
+  participantUserIds Json
+  startTime          DateTime
+  durationMinutes    Int
+  title              String
+  status             MeetingRequestStatus @default(PENDING)
+  failureReason      String?
+  meeting            Meeting?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([organizerUserId, createdAt])
+  @@index([status, createdAt])
+  @@index([startTime])
+  @@map("meeting_requests")
+}
+
+model Meeting {
+  id                String          @id @default(uuid())
+  requestId         String          @unique
+  request           MeetingRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  provider          MeetingProvider
+  externalMeetingId String          @unique
+  joinUrl           String
+  metadata          Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([provider, createdAt])
+  @@map("meetings")
 }

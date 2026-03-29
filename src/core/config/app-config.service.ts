@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppConfig } from './app.config';
 import { DatabaseConfig } from './database.config';
 import { GoogleSheetsConfig } from './google-sheets.config';
+import { MicrosoftGraphConfig } from './microsoft-graph.config';
 import { QueueConfig } from './queue.config';
 import { RedisConfig } from './redis.config';
 import { SchedulerConfig } from './scheduler.config';
@@ -38,6 +39,10 @@ export class AppConfigService {
 
   get scheduler(): SchedulerConfig {
     return this.configService.getOrThrow<SchedulerConfig>('scheduler');
+  }
+
+  get microsoftGraph(): MicrosoftGraphConfig {
+    return this.configService.getOrThrow<MicrosoftGraphConfig>('microsoftGraph');
   }
 
   get port(): number {

@@ -52,6 +52,18 @@
 - **Decision:** Send missing-preference reminders through dedicated queue worker and Slack outbound adapter.
 - **Reason:** Decouples reminder I/O from scheduler execution and supports controlled retries/failure tracking.
 
+## 14) Microsoft Graph Meeting Orchestration via Adapter
+- **Decision:** Implement Teams meeting creation through a dedicated Microsoft Graph integration module.
+- **Reason:** Keeps external API concerns isolated from meetings domain logic.
+
+## 15) Meeting Reliability Loop with Retry Worker
+- **Decision:** Queue failed meeting creation attempts and process them with bounded retry + dead-letter flow.
+- **Reason:** Prevents synchronous API failures from dropping valid meeting requests.
+
+## 16) Token Cache with Refresh-on-401
+- **Decision:** Cache client-credentials token and force refresh on unauthorized Graph responses.
+- **Reason:** Reduces token overhead and handles expiry without manual intervention.
+
 ## Trade-offs
 - Added more foundational wiring now to reduce integration friction later.
 - Chose explicit abstraction layers (config/logger/queue) to prioritize maintainability over minimal boot code.

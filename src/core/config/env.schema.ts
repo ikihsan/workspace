@@ -23,6 +23,14 @@ export const envSchema = z.object({
   GOOGLE_SHEETS_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(300),
   PREFERENCE_SYNC_CRON: z.string().min(1).default('0 9 * * *'),
   PREFERENCE_SYNC_TIMEZONE: z.string().min(1).default('UTC'),
+  MICROSOFT_TENANT_ID: z.string().min(1),
+  MICROSOFT_CLIENT_ID: z.string().min(1),
+  MICROSOFT_CLIENT_SECRET: z.string().min(1),
+  MICROSOFT_GRAPH_BASE_URL: z.string().url().default('https://graph.microsoft.com/v1.0'),
+  MICROSOFT_TOKEN_URL: z
+    .string()
+    .url()
+    .default('https://login.microsoftonline.com/common/oauth2/v2.0/token'),
 });
 
 export type Env = z.infer<typeof envSchema>;

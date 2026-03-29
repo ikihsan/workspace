@@ -10,6 +10,7 @@ import {
   slackConfig,
   validateEnv,
 } from './index';
+import microsoftGraphConfig from './microsoft-graph.config';
 import { AppConfigService } from './app-config.service';
 
 @Module({
@@ -26,6 +27,7 @@ import { AppConfigService } from './app-config.service';
         slackConfig,
         googleSheetsConfig,
         schedulerConfig,
+        microsoftGraphConfig,
       ],
       validate: validateEnv,
     }),

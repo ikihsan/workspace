@@ -12,6 +12,7 @@ import { UsersModule } from './modules/users/users.module';
 import { UserIdentitiesModule } from './modules/user-identities/user-identities.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { PreferencesModule } from './modules/preferences/preferences.module';
+import { MeetingsModule } from './modules/meetings/meetings.module';
 import { SlackModule } from './integrations/slack/slack.module';
 
 @Module({
@@ -26,6 +27,7 @@ import { SlackModule } from './integrations/slack/slack.module';
     UserIdentitiesModule,
     AttendanceModule,
     PreferencesModule,
+    MeetingsModule,
     SlackModule,
   ],
   providers: [

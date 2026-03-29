@@ -2,7 +2,7 @@
 
 ## System Overview
 - Backend is a NestJS modular monolith prepared for production use.
-- Phase 1 provides infrastructure, Phase 2 adds identity and user mapping, Phase 3 adds attendance domain logic, Phase 4 adds Slack attendance ingress, and Phase 5 adds preference automation orchestration.
+- Phase 1 provides infrastructure, Phase 2 adds identity and user mapping, Phase 3 adds attendance domain logic, Phase 4 adds Slack attendance ingress, Phase 5 adds preference automation orchestration, and Phase 6 adds Microsoft Teams meeting scheduling.
 - Core responsibilities implemented: typed config, logging/tracing, error normalization, persistence and queue infrastructure, health endpoint.
 - Runtime now includes graceful shutdown hooks and dependency readiness checks (PostgreSQL + Redis).
 
@@ -21,10 +21,12 @@
   - `user-identities`: provider identity mapping (`slack`, `google`, `microsoft`) to internal users.
   - `attendance`: session/event state machine for `start`, `break`, `resume`, `stop` with idempotency and transactional consistency.
   - `preferences`: daily preference sync, missing preference detection, reminder queue orchestration.
+  - `meetings`: deterministic request validation, Microsoft meeting orchestration, and persistence.
 - `src/integrations`
   - `slack`: verified inbound event handling with deterministic command mapping for attendance.
   - `google-sheets`: deterministic sheet reader for preference rows.
-  - Placeholder boundary for Microsoft Graph and Azure OpenAI.
+  - `microsoft-graph`: Teams meeting creation adapter with token lifecycle handling.
+  - Placeholder boundary for Azure OpenAI.
 - `src/workers`
   - Base worker contracts for queue jobs.
 
@@ -74,3 +76,10 @@
 3. Preferences module maps rows to users and upserts daily preference records.
 4. Active users missing preferences are identified deterministically.
 5. Reminder jobs are queued to `preference-reminder` and dispatched via Slack identity mapping.
+
+## Meeting Scheduling Flow (Phase 6)
+1. Internal meeting request is submitted with structured scheduling fields.
+2. Meetings module validates organizer/participants and Microsoft identity mappings.
+3. Microsoft Graph integration creates Teams online meeting and returns external id/join URL.
+4. Request and meeting metadata are persisted transactionally-safe at module level.
+5. Failures are retried through `meeting-create-retry`, then dead-lettered after max attempts.

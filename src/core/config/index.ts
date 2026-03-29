@@ -19,4 +19,7 @@ export type { GoogleSheetsConfig } from './google-sheets.config';
 export { default as schedulerConfig } from './scheduler.config';
 export type { SchedulerConfig } from './scheduler.config';
 
+export { default as microsoftGraphConfig } from './microsoft-graph.config';
+export type { MicrosoftGraphConfig } from './microsoft-graph.config';
+
 export { validateEnv } from './env.schema';
