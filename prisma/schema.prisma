@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum IdentityProvider {
+  SLACK
+  GOOGLE
+  MICROSOFT
+}
+
+enum AttendanceSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum AttendanceEventType {
+  START
+  BREAK
+  RESUME
+  STOP
+}
+
+enum AttendanceEventSource {
+  INTERNAL
+  SLACK
+}
+
+enum PreferenceValue {
+  TEA
+  COFFEE
+}
+
+enum PreferenceSource {
+  GOOGLE_SHEETS
+}
+
+enum ReminderType {
+  MISSING_PREFERENCE
+}
+
+enum ReminderChannel {
+  SLACK
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  name               String
+  timezone           String
+  status             UserStatus          @default(ACTIVE)
+  identities         UserIdentity[]
+  attendanceSessions AttendanceSession[]
+  attendanceEvents   AttendanceEvent[]
+  preferenceDays     PreferenceDay[]
+  reminders          Reminder[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([status])
+  @@map("users")
+}
+
+model UserIdentity {
+  id             String           @id @default(uuid())
+  provider       IdentityProvider
+  providerUserId String
+  metadata       Json?
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@map("user_identities")
+}
+
+model AttendanceSession {
+  id                String                  @id @default(uuid())
+  userId            String
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workDate          String
+  startedAt         DateTime
+  endedAt           DateTime?
+  totalBreakSeconds Int                     @default(0)
+  status            AttendanceSessionStatus @default(OPEN)
+  events            AttendanceEvent[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@unique([userId, workDate, status])
+  @@index([userId, workDate])
+  @@index([userId, status])
+  @@map("attendance_sessions")
+}
+
+model AttendanceEvent {
+  id             String                @id @default(uuid())
+  userId         String
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        AttendanceSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  eventType      AttendanceEventType
+  eventTimestamp DateTime
+  source         AttendanceEventSource
+  idempotencyKey String                @unique
+  createdAt      DateTime              @default(now())
+
+  @@index([userId, eventTimestamp])
+  @@index([sessionId, eventTimestamp])
+  @@map("attendance_events")
+}
+
+model PreferenceDay {
+  id         String           @id @default(uuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date       String
+  preference PreferenceValue
+  source     PreferenceSource @default(GOOGLE_SHEETS)
+  remindedAt DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([userId, date])
+  @@index([date, preference])
+  @@map("preference_days")
+}
+
+model Reminder {
+  id          String         @id @default(uuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        String
+  reminderType ReminderType
+  channel     ReminderChannel
+  status      ReminderStatus @default(PENDING)
+  attemptCount Int           @default(0)
+  lastError   String?
+  sentAt      DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([userId, date, reminderType, channel])
+  @@index([status, createdAt])
+  @@map("reminders")
+}
