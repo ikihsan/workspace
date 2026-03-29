@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppConfig } from './app.config';
+import { AzureOpenAiConfig } from './azure-openai.config';
 import { DatabaseConfig } from './database.config';
 import { GoogleSheetsConfig } from './google-sheets.config';
 import { MicrosoftGraphConfig } from './microsoft-graph.config';
@@ -43,6 +44,10 @@ export class AppConfigService {
 
   get microsoftGraph(): MicrosoftGraphConfig {
     return this.configService.getOrThrow<MicrosoftGraphConfig>('microsoftGraph');
+  }
+
+  get azureOpenAi(): AzureOpenAiConfig {
+    return this.configService.getOrThrow<AzureOpenAiConfig>('azureOpenAi');
   }
 
   get port(): number {

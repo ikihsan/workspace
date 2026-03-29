@@ -16,7 +16,7 @@
 - Google Sheets preference ingest is implemented with deterministic row mapping.
 - Slack outbound reminder sending is implemented for missing daily preferences.
 - Microsoft Graph meeting creation is implemented with token caching/refresh and retry handling.
-- Azure OpenAI integration remains pending.
+- Azure OpenAI intent parsing is implemented as assistive-only with strict JSON validation at routing layer.
 
 ## Slack Documentation
 - Detailed Slack contract and flow are documented in `docs/integrations-slack.md`.

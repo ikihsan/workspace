@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { PreferenceValue, ReminderStatus, User } from '@prisma/client';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { PreferenceDay, PreferenceSource, PreferenceValue, ReminderStatus, User } from '@prisma/client';
 import { DateTime } from 'luxon';
 import { AppLogger } from '../../core/logger/app-logger.service';
 import { BASE_QUEUE_NAMES } from '../../core/queue/queue.constants';
@@ -118,6 +118,32 @@ export class PreferencesService {
     };
   }
 
+  async setDailyPreferenceFromIntent(
+    userId: string,
+    preference: PreferenceValue,
+    dateToken?: string,
+  ): Promise<PreferenceDay> {
+    const user = await this.usersService.findById(userId);
+    const date = this.resolveDateFromToken(dateToken, user.timezone);
+
+    const result = await this.preferencesRepository.upsertPreferenceDay(
+      userId,
+      date,
+      preference,
+      PreferenceSource.GOOGLE_SHEETS,
+    );
+
+    this.logger.info('Preference set from AI intent', {
+      module: 'preferences',
+      userId,
+      date,
+      preference,
+      source: PreferenceSource.GOOGLE_SHEETS,
+    });
+
+    return result;
+  }
+
   private filterValidRows(rows: PreferenceSheetRow[]): PreferenceSheetRow[] {
     return rows.filter((row) => row.email.trim().length > 0 && row.preference.trim().length > 0);
   }
@@ -161,5 +187,25 @@ export class PreferencesService {
 
   private buildUserDayKey(userId: string, localDate: string): string {
     return `${userId}:${localDate}`;
+  }
+
+  private resolveDateFromToken(dateToken: string | undefined, timezone: string): string {
+    const now = DateTime.utc().setZone(timezone);
+    const normalized = (dateToken ?? 'today').trim().toLowerCase();
+
+    if (normalized === 'today') {
+      return now.toISODate() as string;
+    }
+
+    if (normalized === 'tomorrow') {
+      return now.plus({ days: 1 }).toISODate() as string;
+    }
+
+    const explicit = DateTime.fromISO(normalized, { zone: timezone });
+    if (explicit.isValid) {
+      return explicit.toISODate() as string;
+    }
+
+    throw new BadRequestException('Invalid preference date parameter');
   }
 }

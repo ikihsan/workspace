@@ -13,6 +13,7 @@ import { UserIdentitiesModule } from './modules/user-identities/user-identities.
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { PreferencesModule } from './modules/preferences/preferences.module';
 import { MeetingsModule } from './modules/meetings/meetings.module';
+import { AiAgentModule } from './modules/ai-agent/ai-agent.module';
 import { SlackModule } from './integrations/slack/slack.module';
 
 @Module({
@@ -28,6 +29,7 @@ import { SlackModule } from './integrations/slack/slack.module';
     AttendanceModule,
     PreferencesModule,
     MeetingsModule,
+    AiAgentModule,
     SlackModule,
   ],
   providers: [

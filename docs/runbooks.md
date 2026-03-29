@@ -53,6 +53,20 @@
 3. Validate Microsoft Graph app credentials and permission scopes.
 4. Replay request only after root-cause remediation.
 
+## AI Intent Parse Failure Handling
+- Queue: `system-retry`
+- Job name: `ai-intent-parse-failure`
+- Trigger: Azure OpenAI parse call failure or invalid schema response.
+- Runtime behavior:
+	- deterministic fallback parser handles command execution path
+	- failure context is logged and queued for inspection/replay.
+
+## AI Routing Validation Checklist
+1. Confirm AI response includes only `action` and `parameters` shape.
+2. Validate action-specific parameters before service routing.
+3. Reject execution if required parameters are missing (especially meeting fields).
+4. Verify no direct integration call can execute business action without module validation.
+
 ## Operational Notes
 - Use correlation ID for tracing logs per request.
 - Do not log credentials, tokens, or secret values.

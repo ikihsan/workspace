@@ -31,6 +31,10 @@ export const envSchema = z.object({
     .string()
     .url()
     .default('https://login.microsoftonline.com/common/oauth2/v2.0/token'),
+  AZURE_OPENAI_ENDPOINT: z.string().url(),
+  AZURE_OPENAI_API_KEY: z.string().min(1),
+  AZURE_OPENAI_DEPLOYMENT: z.string().min(1),
+  AZURE_OPENAI_API_VERSION: z.string().min(1).default('2024-10-21'),
 });
 
 export type Env = z.infer<typeof envSchema>;

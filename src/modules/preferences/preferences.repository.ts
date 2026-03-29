@@ -19,6 +19,7 @@ export class PreferencesRepository {
     userId: string,
     date: string,
     preference: PreferenceValue,
+    source: PreferenceSource = PreferenceSource.GOOGLE_SHEETS,
   ): Promise<PreferenceDay> {
     return this.prismaService.preferenceDay.upsert({
       where: {
@@ -29,13 +30,13 @@ export class PreferencesRepository {
       },
       update: {
         preference,
-        source: PreferenceSource.GOOGLE_SHEETS,
+        source,
       },
       create: {
         userId,
         date,
         preference,
-        source: PreferenceSource.GOOGLE_SHEETS,
+        source,
       },
     });
   }

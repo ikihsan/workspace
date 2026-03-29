@@ -2,7 +2,7 @@
 
 ## System Overview
 - Backend is a NestJS modular monolith prepared for production use.
-- Phase 1 provides infrastructure, Phase 2 adds identity and user mapping, Phase 3 adds attendance domain logic, Phase 4 adds Slack attendance ingress, Phase 5 adds preference automation orchestration, and Phase 6 adds Microsoft Teams meeting scheduling.
+- Phase 1 provides infrastructure, Phase 2 adds identity and user mapping, Phase 3 adds attendance domain logic, Phase 4 adds Slack attendance ingress, Phase 5 adds preference automation orchestration, Phase 6 adds Microsoft Teams meeting scheduling, and Phase 7 adds AI intent parsing and routing.
 - Core responsibilities implemented: typed config, logging/tracing, error normalization, persistence and queue infrastructure, health endpoint.
 - Runtime now includes graceful shutdown hooks and dependency readiness checks (PostgreSQL + Redis).
 
@@ -22,11 +22,12 @@
   - `attendance`: session/event state machine for `start`, `break`, `resume`, `stop` with idempotency and transactional consistency.
   - `preferences`: daily preference sync, missing preference detection, reminder queue orchestration.
   - `meetings`: deterministic request validation, Microsoft meeting orchestration, and persistence.
+  - `ai-agent`: natural language command parsing (AI assist + deterministic fallback), schema validation, and safe routing.
 - `src/integrations`
   - `slack`: verified inbound event handling with deterministic command mapping for attendance.
   - `google-sheets`: deterministic sheet reader for preference rows.
   - `microsoft-graph`: Teams meeting creation adapter with token lifecycle handling.
-  - Placeholder boundary for Azure OpenAI.
+  - `azure-openai`: assistive intent parser returning strict JSON shape for downstream validation.
 - `src/workers`
   - Base worker contracts for queue jobs.
 
@@ -83,3 +84,11 @@
 3. Microsoft Graph integration creates Teams online meeting and returns external id/join URL.
 4. Request and meeting metadata are persisted transactionally-safe at module level.
 5. Failures are retried through `meeting-create-retry`, then dead-lettered after max attempts.
+
+## AI Intent Routing Flow (Phase 7)
+1. Natural-language command is posted to internal AI agent endpoint with user context.
+2. Azure OpenAI parses intent to structured JSON (`action`, `parameters`) with retries.
+3. AI output is schema-validated and normalized before any execution path.
+4. On AI parse failure/invalid response, deterministic fallback parser derives intent.
+5. Intent is routed to attendance/meetings/preferences services only after validation.
+6. AI failures are enqueued to `system-retry` for operational visibility.

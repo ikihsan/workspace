@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import {
+  azureOpenAiConfig,
   appConfig,
   databaseConfig,
   googleSheetsConfig,
@@ -28,6 +29,7 @@ import { AppConfigService } from './app-config.service';
         googleSheetsConfig,
         schedulerConfig,
         microsoftGraphConfig,
+        azureOpenAiConfig,
       ],
       validate: validateEnv,
     }),

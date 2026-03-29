@@ -22,4 +22,7 @@ export type { SchedulerConfig } from './scheduler.config';
 export { default as microsoftGraphConfig } from './microsoft-graph.config';
 export type { MicrosoftGraphConfig } from './microsoft-graph.config';
 
+export { default as azureOpenAiConfig } from './azure-openai.config';
+export type { AzureOpenAiConfig } from './azure-openai.config';
+
 export { validateEnv } from './env.schema';

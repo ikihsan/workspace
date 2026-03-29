@@ -64,6 +64,22 @@
 - **Decision:** Cache client-credentials token and force refresh on unauthorized Graph responses.
 - **Reason:** Reduces token overhead and handles expiry without manual intervention.
 
+## 17) Azure OpenAI as Assistive Parser Only
+- **Decision:** Restrict Azure OpenAI to intent parsing output (`action`, `parameters`) and prohibit direct action execution.
+- **Reason:** Maintains deterministic control over critical business operations.
+
+## 18) Strict Schema Validation for AI Output
+- **Decision:** Validate AI response structure before routing and reject malformed payloads.
+- **Reason:** Prevents unsafe or ambiguous execution paths from model output drift.
+
+## 19) Deterministic Fallback Intent Parser
+- **Decision:** Implement rule-based parser for attendance, meeting, and preference intents when AI fails.
+- **Reason:** Preserves reliability and continuity when AI or network dependencies are degraded.
+
+## 20) AI Failure Visibility Through Queue Fallback
+- **Decision:** Enqueue AI parse failures into system retry queue with structured context.
+- **Reason:** Enables operational replay/inspection without blocking user workflows.
+
 ## Trade-offs
 - Added more foundational wiring now to reduce integration friction later.
 - Chose explicit abstraction layers (config/logger/queue) to prioritize maintainability over minimal boot code.
