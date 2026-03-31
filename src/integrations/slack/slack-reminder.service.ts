@@ -17,6 +17,10 @@ export class SlackReminderService {
   }
 
   async sendMissingPreferenceReminder(slackUserId: string, date: string): Promise<void> {
+    if (!this.appConfigService.slack.botToken) {
+      throw new Error('Slack integration is not configured (missing bot token)');
+    }
+
     const payload = {
       channel: slackUserId,
       text: `Please submit your tea/coffee preference for ${date}.`,

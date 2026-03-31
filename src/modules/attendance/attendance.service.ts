@@ -15,6 +15,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DateTime } from 'luxon';
+import { AppLogger } from '../../core/logger/app-logger.service';
 import { UsersService } from '../users/users.service';
 import { UserIdentitiesService } from '../user-identities/user-identities.service';
 import { ProcessAttendanceEventDto } from './dto/process-attendance-event.dto';
@@ -44,11 +45,28 @@ export class AttendanceService {
     private readonly attendanceRepository: AttendanceRepository,
     private readonly usersService: UsersService,
     private readonly userIdentitiesService: UserIdentitiesService,
-  ) {}
+    private readonly logger: AppLogger,
+  ) {
+    this.logger.setContext(AttendanceService.name);
+  }
 
   async processEvent(
     processAttendanceEventDto: ProcessAttendanceEventDto,
   ): Promise<AttendanceEventResult> {
+    this.logger.info('Attendance event processing started', {
+      module: 'attendance',
+      eventType: processAttendanceEventDto.eventType,
+      source: processAttendanceEventDto.source,
+      idempotencyKey: processAttendanceEventDto.idempotencyKey,
+      hasUserId: Boolean(processAttendanceEventDto.userId),
+      hasProviderPair: Boolean(
+        processAttendanceEventDto.provider && processAttendanceEventDto.providerUserId,
+      ),
+      provider: processAttendanceEventDto.provider,
+      providerUserId: processAttendanceEventDto.providerUserId,
+      eventTimestamp: processAttendanceEventDto.eventTimestamp,
+    });
+
     this.validateIdentityInput(processAttendanceEventDto);
 
     const user = await this.resolveUser(processAttendanceEventDto);
@@ -56,6 +74,14 @@ export class AttendanceService {
 
     const eventTimestamp = this.resolveTimestamp(processAttendanceEventDto.eventTimestamp);
     const workDate = this.resolveWorkDate(eventTimestamp, user.timezone);
+
+    this.logger.debug('Attendance event resolved to user/work date', {
+      module: 'attendance',
+      userId: user.id,
+      timezone: user.timezone,
+      workDate,
+      eventTimestamp: eventTimestamp.toISOString(),
+    });
 
     return this.executeWithRetry(async () => {
       return this.attendanceRepository.withTransaction(async (tx) => {
@@ -65,6 +91,13 @@ export class AttendanceService {
         );
 
         if (existingEvent) {
+          this.logger.info('Attendance event deduplicated by idempotency key', {
+            module: 'attendance',
+            idempotencyKey: processAttendanceEventDto.idempotencyKey,
+            existingEventId: existingEvent.id,
+            sessionId: existingEvent.sessionId,
+          });
+
           return this.buildDuplicateResponse(tx, existingEvent, user.id, workDate, eventTimestamp);
         }
 
@@ -94,6 +127,16 @@ export class AttendanceService {
           transitionResult.latestEvent,
           transitionResult.eventTimestamp,
         );
+
+        this.logger.info('Attendance event persisted successfully', {
+          module: 'attendance',
+          userId: transitionResult.session.userId,
+          sessionId: transitionResult.session.id,
+          eventType: transitionResult.latestEvent.eventType,
+          sessionStatus: transitionResult.session.status,
+          workDate: transitionResult.session.workDate,
+          metrics,
+        });
 
         return {
           duplicate: false,
@@ -154,12 +197,36 @@ export class AttendanceService {
   ): Promise<{ session: AttendanceSession; latestEvent: AttendanceEvent; eventTimestamp: Date }> {
     switch (input.eventType) {
       case AttendanceEventType.START:
+        this.logger.debug('Applying START transition', {
+          module: 'attendance',
+          userId: input.user.id,
+          workDate: input.workDate,
+        });
+
         return this.handleStart(tx, input);
       case AttendanceEventType.BREAK:
+        this.logger.debug('Applying BREAK transition', {
+          module: 'attendance',
+          userId: input.user.id,
+          workDate: input.workDate,
+        });
+
         return this.handleBreak(tx, input);
       case AttendanceEventType.RESUME:
+        this.logger.debug('Applying RESUME transition', {
+          module: 'attendance',
+          userId: input.user.id,
+          workDate: input.workDate,
+        });
+
         return this.handleResume(tx, input);
       case AttendanceEventType.STOP:
+        this.logger.debug('Applying STOP transition', {
+          module: 'attendance',
+          userId: input.user.id,
+          workDate: input.workDate,
+        });
+
         return this.handleStop(tx, input);
       default:
         throw new BadRequestException('Unsupported attendance event type');
@@ -492,12 +559,26 @@ export class AttendanceService {
   private async executeWithRetry<T>(operation: () => Promise<T>): Promise<T> {
     for (let attempt = 1; attempt <= TRANSACTION_RETRY_ATTEMPTS; attempt += 1) {
       try {
+        this.logger.debug('Attendance transaction attempt', {
+          module: 'attendance',
+          attempt,
+          maxAttempts: TRANSACTION_RETRY_ATTEMPTS,
+        });
+
         return await operation();
       } catch (error: unknown) {
         const retryable =
           this.isRetryableTransactionError(error) || this.isUniqueConstraintError(error);
 
         if (!retryable || attempt === TRANSACTION_RETRY_ATTEMPTS) {
+          this.logger.error('Attendance transaction failed without further retry', {
+            module: 'attendance',
+            attempt,
+            maxAttempts: TRANSACTION_RETRY_ATTEMPTS,
+            retryable,
+            error: error instanceof Error ? error.message : 'Unknown attendance transaction error',
+          });
+
           if (this.isUniqueConstraintError(error)) {
             throw new ConflictException(
               'Duplicate idempotency key or concurrent session state conflict detected',
@@ -506,6 +587,13 @@ export class AttendanceService {
 
           throw error;
         }
+
+        this.logger.warn('Attendance transaction retrying after transient failure', {
+          module: 'attendance',
+          attempt,
+          maxAttempts: TRANSACTION_RETRY_ATTEMPTS,
+          error: error instanceof Error ? error.message : 'Unknown attendance transaction error',
+        });
 
         await this.delay(attempt * 20);
       }

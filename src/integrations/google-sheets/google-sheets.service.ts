@@ -81,10 +81,21 @@ export class GoogleSheetsService {
   private async fetchRows(): Promise<PreferenceSheetRow[]> {
     const config = this.appConfigService.googleSheets;
 
+    if (!config.apiKey || !config.spreadsheetId || !config.range) {
+      throw new Error('Google Sheets integration is not configured');
+    }
+
     const range = encodeURIComponent(config.range);
     const endpoint =
       `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/${range}` +
       `?key=${encodeURIComponent(config.apiKey)}`;
+
+    this.logger.debug('Fetching preference rows from Google Sheets', {
+      integration: 'google-sheets',
+      spreadsheetId: config.spreadsheetId,
+      range: config.range,
+      cacheTtlSeconds: config.cacheTtlSeconds,
+    });
 
     const response = await fetch(endpoint, {
       method: 'GET',

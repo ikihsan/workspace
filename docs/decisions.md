@@ -80,6 +80,14 @@
 - **Decision:** Enqueue AI parse failures into system retry queue with structured context.
 - **Reason:** Enables operational replay/inspection without blocking user workflows.
 
+## 21) Optional Integration Credentials at Bootstrap
+- **Decision:** Make Slack/Google Sheets/Microsoft Graph/Azure OpenAI credentials optional for process startup validation.
+- **Reason:** Core runtime verification (`/health`, Prisma, Redis, queue bootstrap) should remain available in local/dev environments without third-party secrets.
+
+## 22) Feature-Level Integration Configuration Guards
+- **Decision:** Add explicit runtime guards in integration adapters before outbound calls/signature verification.
+- **Reason:** Preserves clear failure semantics for integration features while preventing startup-time crashes from missing optional credentials.
+
 ## Trade-offs
 - Added more foundational wiring now to reduce integration friction later.
 - Chose explicit abstraction layers (config/logger/queue) to prioritize maintainability over minimal boot code.

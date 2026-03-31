@@ -95,6 +95,14 @@ export class SlackService {
     const slackUserId = envelope.event.user?.trim();
     const text = envelope.event.text?.trim();
 
+    this.logger.info('Slack message payload extracted', {
+      integration: 'slack',
+      slackEventId: envelope.event_id,
+      slackUserId,
+      text,
+      textLength: text?.length,
+    });
+
     if (!slackUserId || !text) {
       return {
         ok: true,
@@ -106,6 +114,12 @@ export class SlackService {
 
     const eventType = this.commandParser.parse(text);
     if (!eventType) {
+      this.logger.info('Slack message ignored because command is unsupported', {
+        integration: 'slack',
+        slackEventId: envelope.event_id,
+        text,
+      });
+
       return {
         ok: true,
         queued: false,
@@ -115,6 +129,13 @@ export class SlackService {
     }
 
     try {
+      this.logger.info('Dispatching Slack attendance event', {
+        integration: 'slack',
+        slackEventId: envelope.event_id,
+        slackUserId,
+        mappedEventType: eventType,
+      });
+
       await this.attendanceService.processEvent({
         eventType,
         source: 'SLACK' as AttendanceEventSource,

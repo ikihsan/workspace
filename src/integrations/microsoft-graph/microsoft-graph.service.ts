@@ -157,6 +157,10 @@ export class MicrosoftGraphService {
 
     const config = this.appConfigService.microsoftGraph;
 
+    if (!config.tenantId || !config.clientId || !config.clientSecret) {
+      throw new Error('Microsoft Graph integration is not configured');
+    }
+
     const body = new URLSearchParams({
       client_id: config.clientId,
       client_secret: config.clientSecret,

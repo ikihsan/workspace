@@ -5,6 +5,7 @@
 - Phase 1 provides infrastructure, Phase 2 adds identity and user mapping, Phase 3 adds attendance domain logic, Phase 4 adds Slack attendance ingress, Phase 5 adds preference automation orchestration, Phase 6 adds Microsoft Teams meeting scheduling, and Phase 7 adds AI intent parsing and routing.
 - Core responsibilities implemented: typed config, logging/tracing, error normalization, persistence and queue infrastructure, health endpoint.
 - Runtime now includes graceful shutdown hooks and dependency readiness checks (PostgreSQL + Redis).
+- Local bootstrap requires only core dependencies (`DATABASE_URL`, Redis, queue, scheduler config); third-party integration credentials are optional at process start.
 
 ## Module Structure
 - `src/core`
@@ -35,6 +36,7 @@
 - All external systems must be accessed through `src/integrations/*` adapters.
 - Business orchestration lives under `src/modules/*` and depends on integration interfaces, not SDK details.
 - Queue workers consume typed payloads and call module services; workers never hold domain rules directly.
+- Integration adapters now perform feature-level configuration checks at call time so missing Slack/Google/Microsoft/Azure credentials do not break core app boot.
 
 ## Identity Mapping Boundaries
 - User identity resolution is internal only in Phase 2 (no external provider API calls).

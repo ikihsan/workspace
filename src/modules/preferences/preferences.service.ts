@@ -33,6 +33,12 @@ export class PreferencesService {
     const rows = await this.googleSheetsService.readPreferenceRows();
     const validRows = this.filterValidRows(rows);
 
+    this.logger.info('Preference sync rows loaded', {
+      module: 'preferences',
+      fetchedRows: rows.length,
+      validRows: validRows.length,
+    });
+
     const usersByEmail = await this.loadUsersByEmail(validRows);
 
     const importedPreferenceKeys = new Set<string>();
@@ -43,12 +49,27 @@ export class PreferencesService {
       const preference = this.toPreferenceValue(row.preference);
 
       if (!user || !preference) {
+        this.logger.debug('Preference row skipped', {
+          module: 'preferences',
+          rowEmail: row.email,
+          hasMappedUser: Boolean(user),
+          preferenceValue: row.preference,
+        });
+
         continue;
       }
 
       const localDate = this.resolveUserLocalDate(now, user.timezone);
 
       await this.preferencesRepository.upsertPreferenceDay(user.id, localDate, preference);
+
+      this.logger.debug('Preference row persisted', {
+        module: 'preferences',
+        userId: user.id,
+        email: row.email,
+        localDate,
+        preference,
+      });
 
       importedPreferenceKeys.add(this.buildUserDayKey(user.id, localDate));
       importedCount += 1;
@@ -84,6 +105,14 @@ export class PreferencesService {
       );
 
       if (!created || reminder.status === ReminderStatus.SENT) {
+        this.logger.debug('Preference reminder not queued', {
+          module: 'preferences',
+          userId: user.id,
+          date: localDate,
+          created,
+          reminderStatus: reminder.status,
+        });
+
         continue;
       }
 
@@ -102,6 +131,13 @@ export class PreferencesService {
       );
 
       remindersQueued += 1;
+
+      this.logger.info('Preference reminder queued', {
+        module: 'preferences',
+        userId: user.id,
+        date: localDate,
+        reminderId: reminder.id,
+      });
     }
 
     this.logger.info('Daily preference sync completed', {

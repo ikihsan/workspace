@@ -40,6 +40,11 @@ export class AzureOpenAiService {
 
   async parseIntent(inputText: string): Promise<{ raw: string; parsed: AzureIntentParseResult }> {
     const config = this.appConfigService.azureOpenAi;
+
+    if (!config.endpoint || !config.apiKey || !config.deployment) {
+      throw new Error('Azure OpenAI integration is not configured');
+    }
+
     const url = `${config.endpoint}/openai/deployments/${encodeURIComponent(config.deployment)}/chat/completions?api-version=${encodeURIComponent(config.apiVersion)}`;
 
     const systemPrompt = [

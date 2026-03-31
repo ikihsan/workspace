@@ -11,6 +11,10 @@ Provide shared runtime capabilities required by all future modules.
 - Prisma/Redis lifecycle management.
 - BullMQ queue bootstrap and enqueue abstraction.
 
+## Boot Requirements
+- Core boot requires PostgreSQL and Redis connectivity plus queue/scheduler configuration.
+- Third-party integration credentials (Slack/Google/Microsoft/Azure) are optional for startup and validated at feature execution boundaries.
+
 ## Important Constraints
 - No domain business logic in core.
 - Keep abstractions generic and reusable.

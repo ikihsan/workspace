@@ -6,6 +6,20 @@
 3. Ensure Redis is reachable from `REDIS_HOST`/`REDIS_PORT`.
 4. Verify `/health` returns `status=ok` with `checks.postgres.status=up` and `checks.redis.status=up`.
 
+## Local Runtime Verification Checklist
+1. Install dependencies: `npm ci`.
+2. Ensure PostgreSQL and Redis are running locally.
+3. Create database expected by env (`ai_hr`) and validate credentials.
+4. Generate Prisma client: `npm run prisma:generate`.
+5. Sync schema in local/dev when migrations are unavailable: `npx prisma db push`.
+6. Start app: `npm run start`.
+7. Verify health endpoint: `curl http://localhost:3000/health`.
+
+## Required vs Optional Configuration
+- Required to boot: app/core config, `DATABASE_URL`, Redis config, queue config, scheduler config.
+- Required for healthy `/health`: PostgreSQL reachable and Redis reachable.
+- Optional at boot (validated at feature-use time): Slack, Google Sheets, Microsoft Graph, Azure OpenAI credentials.
+
 ## Failure Handling Baseline
 - HTTP errors are standardized by the global exception filter.
 - Correlation ID is returned in response headers and error bodies.

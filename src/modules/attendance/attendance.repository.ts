@@ -5,10 +5,16 @@ import {
 } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { AppLogger } from '../../core/logger/app-logger.service';
 
 @Injectable()
 export class AttendanceRepository {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly logger: AppLogger,
+  ) {
+    this.logger.setContext(AttendanceRepository.name);
+  }
 
   withTransaction<T>(
     callback: (tx: Prisma.TransactionClient) => Promise<T>,
@@ -68,6 +74,13 @@ export class AttendanceRepository {
     tx: Prisma.TransactionClient,
     data: Prisma.AttendanceSessionCreateInput,
   ): Promise<AttendanceSession> {
+    this.logger.debug('DB write: create attendance session', {
+      module: 'attendance',
+      operation: 'createSession',
+      workDate: data.workDate,
+      status: data.status,
+    });
+
     return tx.attendanceSession.create({ data });
   }
 
@@ -76,6 +89,13 @@ export class AttendanceRepository {
     sessionId: string,
     data: Prisma.AttendanceSessionUpdateInput,
   ): Promise<AttendanceSession> {
+    this.logger.debug('DB write: update attendance session', {
+      module: 'attendance',
+      operation: 'updateSession',
+      sessionId,
+      fields: Object.keys(data),
+    });
+
     return tx.attendanceSession.update({
       where: { id: sessionId },
       data,
@@ -86,6 +106,14 @@ export class AttendanceRepository {
     tx: Prisma.TransactionClient,
     data: Prisma.AttendanceEventCreateInput,
   ): Promise<AttendanceEvent> {
+    this.logger.debug('DB write: create attendance event', {
+      module: 'attendance',
+      operation: 'createEvent',
+      eventType: data.eventType,
+      source: data.source,
+      idempotencyKey: data.idempotencyKey,
+    });
+
     return tx.attendanceEvent.create({ data });
   }
 }

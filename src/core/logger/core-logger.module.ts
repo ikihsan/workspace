@@ -13,29 +13,46 @@ import { AppLogger } from './app-logger.service';
     LoggerModule.forRootAsync({
       imports: [CoreConfigModule],
       inject: [AppConfigService],
-      useFactory: (configService: AppConfigService) => ({
-        pinoHttp: {
-          level: configService.logLevel,
-          messageKey: 'message',
-          customProps: (req: IncomingMessage) => {
-            const headerValue = req.headers[CORRELATION_HEADER];
-            const correlationId = typeof headerValue === 'string' ? headerValue : undefined;
+      useFactory: (configService: AppConfigService) => {
+        const isDevelopment = configService.app.nodeEnv === 'development';
 
-            return {
-              correlationId,
-            };
+        return {
+          pinoHttp: {
+            level: configService.logLevel,
+            messageKey: 'message',
+            ...(isDevelopment
+              ? {
+                  transport: {
+                    target: 'pino-pretty',
+                    options: {
+                      colorize: true,
+                      translateTime: 'SYS:standard',
+                      ignore: 'pid,hostname',
+                      singleLine: false,
+                    },
+                  },
+                }
+              : {}),
+            customProps: (req: IncomingMessage) => {
+              const headerValue = req.headers[CORRELATION_HEADER];
+              const correlationId = typeof headerValue === 'string' ? headerValue : undefined;
+
+              return {
+                correlationId,
+              };
+            },
+            genReqId: (req: IncomingMessage) => {
+              const headerValue = req.headers[CORRELATION_HEADER];
+              const incomingId = typeof headerValue === 'string' ? headerValue : undefined;
+              return incomingId && incomingId.trim().length > 0 ? incomingId : randomUUID();
+            },
+            redact: {
+              paths: ['req.headers.authorization', 'req.headers.cookie'],
+              censor: '[REDACTED]',
+            },
           },
-          genReqId: (req: IncomingMessage) => {
-            const headerValue = req.headers[CORRELATION_HEADER];
-            const incomingId = typeof headerValue === 'string' ? headerValue : undefined;
-            return incomingId && incomingId.trim().length > 0 ? incomingId : randomUUID();
-          },
-          redact: {
-            paths: ['req.headers.authorization', 'req.headers.cookie'],
-            censor: '[REDACTED]',
-          },
-        },
-      }),
+        };
+      },
     }),
   ],
   providers: [AppLogger],
