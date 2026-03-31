@@ -38,6 +38,7 @@
     "@nestjs/cli": "^10.4.9",
     "@nestjs/schematics": "^10.1.4",
     "@nestjs/testing": "^10.4.15",
+    "@ngrok/ngrok": "^1.7.0",
     "@types/express": "^5.0.1",
     "@types/luxon": "^3.4.2",
     "@types/node": "^22.14.1",

@@ -39,6 +39,7 @@ export class QueueService implements OnModuleDestroy {
     options?: EnqueueOptions,
   ): Promise<string> {
     const correlationId = options?.correlationId ?? RequestContext.getCorrelationId();
+    const normalizedJobId = this.normalizeJobId(options?.idempotencyKey);
     const tracePayload: QueuePayload = {
       ...payload,
       trace: {
@@ -55,7 +56,7 @@ export class QueueService implements OnModuleDestroy {
       },
       removeOnComplete: DEFAULT_JOB_REMOVE_ON_COMPLETE,
       removeOnFail: DEFAULT_JOB_REMOVE_ON_FAIL,
-      jobId: options?.idempotencyKey,
+        jobId: normalizedJobId,
       ...options,
     });
 
@@ -66,6 +67,7 @@ export class QueueService implements OnModuleDestroy {
       jobId: String(job.id),
       correlationId,
       idempotencyKey: options?.idempotencyKey,
+        normalizedJobId,
       attempts: options?.attempts ?? this.configService.queue.defaultAttempts,
     });
 
@@ -104,5 +106,13 @@ export class QueueService implements OnModuleDestroy {
 
   async onModuleDestroy(): Promise<void> {
     await Promise.all(Array.from(this.queues.values()).map((queue) => queue.close()));
+  }
+
+  private normalizeJobId(idempotencyKey?: string): string | undefined {
+    if (!idempotencyKey) {
+      return undefined;
+    }
+
+    return idempotencyKey.replaceAll(':', '__');
   }
 }

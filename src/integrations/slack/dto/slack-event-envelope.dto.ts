@@ -1,10 +1,11 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsNotEmpty,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
-  ValidateNested,
 } from 'class-validator';
 
 export class SlackInnerEventDto {
@@ -35,6 +36,10 @@ export class SlackInnerEventDto {
 
 export class SlackEventEnvelopeDto {
   @IsString()
+  @IsOptional()
+  token?: string;
+
+  @IsString()
   @IsNotEmpty()
   type!: string;
 
@@ -44,11 +49,46 @@ export class SlackEventEnvelopeDto {
 
   @IsString()
   @IsOptional()
+  team_id?: string;
+
+  @IsString()
+  @IsOptional()
+  api_app_id?: string;
+
+  @IsString()
+  @IsOptional()
   event_id?: string;
 
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  event_time?: number;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  authed_users?: string[];
+
+  @IsArray()
+  @IsOptional()
+  authorizations?: Record<string, unknown>[];
+
+  @IsString()
+  @IsOptional()
+  event_context?: string;
+
+  @IsOptional()
+  is_ext_shared_channel?: boolean;
+
+  @IsString()
+  @IsOptional()
+  context_team_id?: string;
+
+  @IsString()
+  @IsOptional()
+  context_enterprise_id?: string;
+
   @IsObject()
-  @ValidateNested()
-  @Type(() => SlackInnerEventDto)
   @IsOptional()
   event?: SlackInnerEventDto;
 }
