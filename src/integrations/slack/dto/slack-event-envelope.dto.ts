@@ -32,6 +32,10 @@ export class SlackInnerEventDto {
   @IsString()
   @IsOptional()
   event_ts?: string;
+
+  @IsString()
+  @IsOptional()
+  channel?: string;
 }
 
 export class SlackEventEnvelopeDto {

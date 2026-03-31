@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import {
-  AttendanceEventSource,
-  IdentityProvider,
-} from '@prisma/client';
+import { AttendanceEventSource } from '@prisma/client';
 import { AppLogger } from '../../core/logger/app-logger.service';
 import { BASE_QUEUE_NAMES } from '../../core/queue/queue.constants';
 import { QueueService } from '../../core/queue/queue.service';
 import { AttendanceService } from '../../modules/attendance/attendance.service';
-import { SlackCommandParser } from './slack-command.parser';
+import { GoogleSheetsWriteService } from '../google-sheets/google-sheets-write.service';
 import { SlackEventEnvelopeDto } from './dto/slack-event-envelope.dto';
+import { SlackIdentityResolver } from './slack-identity.resolver';
+import { SlackMessageParser } from './slack-message.parser';
+import { SlackTimeResolver } from './slack-time.resolver';
 
 interface SlackEventResponse {
   ok: boolean;
@@ -25,7 +25,10 @@ interface ProcessingOptions {
 export class SlackService {
   constructor(
     private readonly attendanceService: AttendanceService,
-    private readonly commandParser: SlackCommandParser,
+    private readonly messageParser: SlackMessageParser,
+    private readonly timeResolver: SlackTimeResolver,
+    private readonly identityResolver: SlackIdentityResolver,
+    private readonly sheetsWriteService: GoogleSheetsWriteService,
     private readonly queueService: QueueService,
     private readonly logger: AppLogger,
   ) {
@@ -112,9 +115,9 @@ export class SlackService {
       };
     }
 
-    const eventType = this.commandParser.parse(text);
-    if (!eventType) {
-      this.logger.info('Slack message ignored because command is unsupported', {
+    const parsed = this.messageParser.parse(text);
+    if (!parsed) {
+      this.logger.info('Slack message ignored: no attendance intent detected', {
         integration: 'slack',
         slackEventId: envelope.event_id,
         text,
@@ -124,26 +127,49 @@ export class SlackService {
         ok: true,
         queued: false,
         ignored: true,
-        reason: 'Unsupported deterministic command',
+        reason: 'No attendance intent detected',
       };
     }
 
     try {
+      const user = await this.identityResolver.resolveOrCreate(slackUserId);
+
+      const eventTimestamp = this.timeResolver.resolve(
+        parsed.extractedTime,
+        envelope.event.event_ts,
+        user.timezone,
+      );
+
       this.logger.info('Dispatching Slack attendance event', {
         integration: 'slack',
         slackEventId: envelope.event_id,
         slackUserId,
-        mappedEventType: eventType,
+        mappedEventType: parsed.intent,
+        resolvedTime: eventTimestamp,
+        timeSource: parsed.extractedTime ? 'user-provided' : 'slack-event-ts',
       });
 
-      await this.attendanceService.processEvent({
-        eventType,
+      const result = await this.attendanceService.processEvent({
+        eventType: parsed.intent,
         source: 'SLACK' as AttendanceEventSource,
         idempotencyKey: envelope.event_id,
-        provider: IdentityProvider.SLACK,
-        providerUserId: slackUserId,
-        eventTimestamp: this.toIsoTimestamp(envelope.event.event_ts),
+        userId: user.id,
+        eventTimestamp,
       });
+
+      if (!result.duplicate) {
+        this.scheduleSheetLog({
+          eventId: envelope.event_id,
+          date: result.workDate,
+          userName: user.name,
+          slackUserId,
+          actionType: parsed.intent,
+          resolvedTime: result.eventTimestamp,
+          originalMessage: text,
+          slackTimestamp: envelope.event.event_ts ?? '',
+          channel: envelope.event.channel ?? '',
+        });
+      }
 
       return {
         ok: true,
@@ -202,17 +228,50 @@ export class SlackService {
     }
   }
 
-  private toIsoTimestamp(slackEventTs: string | undefined): string | undefined {
-    if (!slackEventTs) {
-      return undefined;
+  private scheduleSheetLog(entry: {
+    eventId: string;
+    date: string;
+    userName: string;
+    slackUserId: string;
+    actionType: string;
+    resolvedTime: string;
+    originalMessage: string;
+    slackTimestamp: string;
+    channel: string;
+  }): void {
+    if (!this.sheetsWriteService.isConfigured()) {
+      return;
     }
 
-    const seconds = Number(slackEventTs);
-    if (!Number.isFinite(seconds)) {
-      return undefined;
-    }
+    this.sheetsWriteService.logAttendanceEvent(entry).catch((error: unknown) => {
+      this.logger.warn('Sheets direct write failed; queuing for retry', {
+        integration: 'google-sheets',
+        eventId: entry.eventId,
+        error: error instanceof Error ? error.message : 'Unknown Sheets write error',
+      });
 
-    return new Date(seconds * 1000).toISOString();
+      this.queueService
+        .addJob(
+          BASE_QUEUE_NAMES.ATTENDANCE_SHEETS_LOG,
+          'attendance-sheets-log',
+          {
+            entry,
+            retryAttempt: 0,
+            firstFailureAt: new Date().toISOString(),
+          },
+          {
+            idempotencyKey: `sheets-log:${entry.eventId}:0`,
+            attempts: 1,
+          },
+        )
+        .catch((queueError: unknown) => {
+          this.logger.error('Failed to queue Sheets log retry', {
+            integration: 'google-sheets',
+            eventId: entry.eventId,
+            error: queueError instanceof Error ? queueError.message : 'Unknown queue error',
+          });
+        });
+    });
   }
 
   private getErrorMessage(error: unknown): string {

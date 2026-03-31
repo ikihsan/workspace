@@ -9,6 +9,7 @@ export const BASE_QUEUE_NAMES = {
   PREFERENCE_SYNC: 'preference-sync',
   PREFERENCE_REMINDER: 'preference-reminder',
   MEETING_CREATE_RETRY: 'meeting-create-retry',
+  ATTENDANCE_SHEETS_LOG: 'attendance-sheets-log',
 } as const;
 
 export type BaseQueueName = (typeof BASE_QUEUE_NAMES)[keyof typeof BASE_QUEUE_NAMES];
